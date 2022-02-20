@@ -3,6 +3,7 @@
 #include "rt_library.h"
 #include "hittable_list.h"
 #include "sphere.h"
+#include "camera.h"
 
 
 vec3 ray_color(const ray& r, const hittable& world){
@@ -18,28 +19,30 @@ vec3 ray_color(const ray& r, const hittable& world){
 int main() {
     const int image_width = 1000;
     const int image_height = 500;
+    const int samples_per_pixel = 100;
+
     std::ofstream fout;
     fout.open("test.ppm");
 
     fout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
-    vec3 lower_left_corner(-2, -1, -1);
-    vec3 horizontal(4,0,0);
-    vec3 vertical(0,2,0);
-    vec3 origin(0,0,0);
-
     hittable_list world;
     world.add(std::make_shared<sphere>(vec3(0,0,-1), 0.5));
     world.add(std::make_shared<sphere>(vec3(0,-100.5, -1), 100));
 
+    camera cam;
+
     for(int j = image_height-1; j >= 0; j--){
         std::cerr << "\rScanlines remaining: " << j << " " << std::flush;   //显示剩余时间
         for(int i = 0; i < image_width; i++){
-           auto u = double(i) / image_width;
-           auto v = double(j) / image_height;
-           ray r(origin, lower_left_corner + u * horizontal + v * vertical);
-           vec3 color = ray_color(r, world);
-           color.write_color(fout);
+            vec3 color(0,0,0);
+            for(int s = 0; s < samples_per_pixel; s++){
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u,v);
+                color += ray_color(r, world);
+            }
+            color.write_color(fout, samples_per_pixel);
         }
     }
     std::cerr << "\nDone.\n";
