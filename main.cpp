@@ -28,10 +28,64 @@ vec3 ray_color(const ray& r, const hittable& world, int depth){
     return (1.0 - t) * vec3(1,1,1) + t * vec3(0.5, 0.7, 1.0);
 }
 
+hittable_list my_scene(){
+    hittable_list world;
+    //漫反射球
+    world.add(std::make_shared<sphere>(vec3(0,0,-1), 0.5,
+                                       std::make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
+    //金属球
+    world.add(std::make_shared<sphere>(vec3(1,0,-1), 0.5,
+                                       std::make_shared<metal>(vec3(0.8, 0.6, 0.2), 0.1)));
+    //玻璃球
+    world.add(std::make_shared<sphere>(vec3(-1,0,-1), 0.5,
+                                       std::make_shared<dielectric>(1.5)));
+    //大玻璃球里套一个反向的小玻璃球，可以形成一个通透的玻璃球
+    world.add(std::make_shared<sphere>(vec3(-1,0,-1), -0.45,
+                                       std::make_shared<dielectric>(1.5)));
+    //地面球
+    world.add(std::make_shared<sphere>(vec3(0,-100.5, -1), 100,
+                                       std::make_shared<lambertian>(vec3(0.6, 0.9, 0.1))));
+    return world;
+}
+
+//生成一个随机场景
+hittable_list random_scene() {
+    hittable_list world;
+    world.add(make_shared<sphere>(vec3(0,-1000,0), 1000, std::make_shared<lambertian>(vec3(0.5, 0.5, 0.5))));
+    int i = 1;
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
+            auto choose_mat = random_double();
+            vec3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
+            if ((center - vec3(4, 0.2, 0)).length() > 0.9) {
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    auto albedo = vec3::random() * vec3::random();
+                    world.add(make_shared<sphere>(center, 0.2, std::make_shared<lambertian>(albedo)));
+                }
+                else if (choose_mat < 0.95) {
+                    // metal
+                    auto albedo = vec3::random(.5, 1);
+                    auto fuzz = random_double(0, .5);
+                    world.add(make_shared<sphere>(center, 0.2, std::make_shared<metal>(albedo, fuzz)));
+                }
+                else {
+                    // glass
+                    world.add(make_shared<sphere>(center, 0.2, std::make_shared<dielectric>(1.5)));
+                }
+            }
+        }
+    }
+    world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, std::make_shared<dielectric>(1.5)));
+    world.add(make_shared<sphere>(vec3(-4, 1, 0), 1.0, std::make_shared<lambertian>(vec3(0.4, 0.2, 0.1))));
+    world.add(make_shared<sphere>(vec3(4, 1, 0), 1.0, std::make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
+    return world;
+}
+
 int main() {
-    const int image_width = 400;
-    const int image_height = 200;
-    const int samples_per_pixel = 100;
+    const int image_width = 800;
+    const int image_height = 400;
+    const int samples_per_pixel = 50;
     const int max_depth = 50;
 
     std::ofstream fout;
@@ -39,20 +93,17 @@ int main() {
 
     fout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
-    hittable_list world;
-    //漫反射球
-    world.add(std::make_shared<sphere>(vec3(0,0,-1), 0.5,
-            std::make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
-    //金属球
-    world.add(std::make_shared<sphere>(vec3(1,0,-1), 0.5,
-            std::make_shared<metal>(vec3(0.8, 0.6, 0.2), 0.1)));
-    //玻璃球
-    world.add(std::make_shared<sphere>(vec3(-1,0,-1), 0.5,
-            std::make_shared<dielectric>(1.5)));
-    //地面球
-    world.add(std::make_shared<sphere>(vec3(0,-100.5, -1), 100,
-            std::make_shared<metal>(vec3(0.8, 0.8, 0.8), 0.5)));
-    camera cam;
+    hittable_list world = random_scene();
+
+    auto R = cos(pi/4);
+    auto aspect_ratio = double(image_width)/image_height;
+    vec3 vup = vec3(0,1,0);
+    double fov = 20;
+    vec3 lookfrom = vec3(-13,2,3);
+    vec3 lookat = vec3(0,0,0);
+    auto dist_to_focus = (lookfrom - lookat).length();
+    auto aperture = 0.1;    //光圈大小
+    camera cam(lookfrom, lookat, vup, fov, aspect_ratio, aperture, dist_to_focus);
 
     for(int j = image_height-1; j >= 0; j--){
         std::cerr << "\rScanlines remaining: " << j << " " << std::flush;   //显示剩余时间

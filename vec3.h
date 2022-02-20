@@ -156,4 +156,14 @@ vec3 refract(const vec3& uv, const vec3& n, double etai_over_etat){
     vec3 r_out_perp = -sqrt(1.0 - r_out_parallel.length_squared()) * n;     //垂直于法线的折射光线分量
     return r_out_parallel + r_out_perp;
 }
+
+//从一个单位小圆盘中射出光线
+vec3 random_in_unit_disk(){
+    while(true){
+        auto p = vec3(random_double(-1, 1), random_double(-1, 1), 0);
+        if(p.length_squared() >= 1) continue;
+        return p;
+    }
+}
+
 #endif //RAYTRACING_VEC3_H
