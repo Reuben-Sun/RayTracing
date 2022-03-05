@@ -8,9 +8,6 @@ vec3 ray_color(const ray& r, const hittable& world, int depth){
         return vec3(0,0,0);
     }
     if(world.hit(r, 0.001, infinity, rec)){     //这里使用0.001是为了防止自相交，从而避免阴影渗漏
-//        vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-//        vec3 target = rec.p + rec.normal + random_unit_vector();
-//        vec3 target = rec.p + random_in_hemisphere(rec.normal);
         ray scattered;
         vec3 attenuation;
         if(rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
@@ -27,7 +24,7 @@ hittable_list my_scene(){
     hittable_list world;
     //漫反射球
     world.add(std::make_shared<sphere>(vec3(0,0,-1), 0.5,
-                                       std::make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
+                                       std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.5, 0.5, 0.5)))));
     //金属球
     world.add(std::make_shared<sphere>(vec3(1,0,-1), 0.5,
                                        std::make_shared<metal>(vec3(0.8, 0.6, 0.2), 0.1)));
@@ -39,14 +36,18 @@ hittable_list my_scene(){
                                        std::make_shared<dielectric>(1.5)));
     //地面球
     world.add(std::make_shared<sphere>(vec3(0,-100.5, -1), 100,
-                                       std::make_shared<lambertian>(vec3(0.6, 0.9, 0.1))));
+                                       std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.5, 0.5, 0.5)))));
     return world;
 }
 
 //生成一个随机场景
 hittable_list random_scene() {
     hittable_list world;
-    world.add(make_shared<sphere>(vec3(0,-1000,0), 1000, std::make_shared<lambertian>(vec3(0.5, 0.5, 0.5))));
+    auto checker = std::make_shared<checker_texture>(
+            std::make_shared<constant_texture>(vec3(0.2, 0.3, 0.1)),
+            std::make_shared<constant_texture>(vec3(0.9, 0.9, 0.9))
+            );  //棋盘格纹理
+    world.add(make_shared<sphere>(vec3(0,-1000,0), 1000, std::make_shared<lambertian>(checker)));
     int i = 1;
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
@@ -56,7 +57,7 @@ hittable_list random_scene() {
                 if (choose_mat < 0.8) {
                     // diffuse
                     auto albedo = vec3::random() * vec3::random();
-                    world.add(make_shared<moving_sphere>(center, center + vec3(0, random_double(0, 0.5), 0), 0.0, 1.0, 0.2, std::make_shared<lambertian>(albedo)));
+                    world.add(make_shared<moving_sphere>(center, center + vec3(0, random_double(0, 0.5), 0), 0.0, 1.0, 0.2, std::make_shared<lambertian>(std::make_shared<constant_texture>(albedo))));
                 }
                 else if (choose_mat < 0.95) {
                     // metal
@@ -72,24 +73,40 @@ hittable_list random_scene() {
         }
     }
     world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, std::make_shared<dielectric>(1.5)));
-    world.add(make_shared<sphere>(vec3(-4, 1, 0), 1.0, std::make_shared<lambertian>(vec3(0.4, 0.2, 0.1))));
+    world.add(make_shared<sphere>(vec3(-4, 1, 0), 1.0, std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.5, 0.5, 0.5)))));
     world.add(make_shared<sphere>(vec3(4, 1, 0), 1.0, std::make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
     return static_cast<hittable_list>(std::make_shared<bvh_node>(world, 0, 1));
 //    return world;
 }
 
+//生成一个两个球的场景
+hittable_list two_spheres() {
+    hittable_list objects;
+
+    auto checker = std::make_shared<checker_texture>(
+            std::make_shared<constant_texture>(vec3(0.2, 0.3, 0.1)),
+            std::make_shared<constant_texture>(vec3(0.9, 0.9, 0.9))
+    );
+
+    objects.add(std::make_shared<sphere>(vec3(0,-10, 0), 10, std::make_shared<lambertian>(checker)));
+    objects.add(std::make_shared<sphere>(vec3(0, 10, 0), 10, std::make_shared<lambertian>(checker)));
+
+    return objects;
+}
+
 int main() {
-    const int image_width = 400;
-    const int image_height = 200;
-    const int samples_per_pixel = 100;
-    const int max_depth = 100;
+    const int image_width = 800;
+    const int image_height = 400;
+    const int samples_per_pixel = 50;
+    const int max_depth = 50;
 
     std::ofstream fout;
     fout.open("test.ppm");
 
     fout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
-    hittable_list world = random_scene();
+//    hittable_list world = random_scene();
+    hittable_list world = two_spheres();
 
     auto R = cos(pi/4);
     auto aspect_ratio = double(image_width)/image_height;

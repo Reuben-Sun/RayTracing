@@ -14,6 +14,7 @@ struct hit_record{
     vec3 p;         //交点坐标
     vec3 normal;    //交点法线，[-1,1]
     double t;       //射线方程t值
+    double u, v;    //纹理uv坐标
     bool front_face;    //入射面是否为外侧，外侧为true
     std::shared_ptr<material> mat_ptr;      //材质
 
