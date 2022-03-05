@@ -1,10 +1,5 @@
-#include <iostream>
-#include <fstream>
 #include "rt_library.h"
-#include "hittable_list.h"
-#include "sphere.h"
-#include "camera.h"
-#include "material.h"
+#include "bvh.h"
 
 
 vec3 ray_color(const ray& r, const hittable& world, int depth){
@@ -61,7 +56,7 @@ hittable_list random_scene() {
                 if (choose_mat < 0.8) {
                     // diffuse
                     auto albedo = vec3::random() * vec3::random();
-                    world.add(make_shared<sphere>(center, 0.2, std::make_shared<lambertian>(albedo)));
+                    world.add(make_shared<moving_sphere>(center, center + vec3(0, random_double(0, 0.5), 0), 0.0, 1.0, 0.2, std::make_shared<lambertian>(albedo)));
                 }
                 else if (choose_mat < 0.95) {
                     // metal
@@ -79,14 +74,15 @@ hittable_list random_scene() {
     world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, std::make_shared<dielectric>(1.5)));
     world.add(make_shared<sphere>(vec3(-4, 1, 0), 1.0, std::make_shared<lambertian>(vec3(0.4, 0.2, 0.1))));
     world.add(make_shared<sphere>(vec3(4, 1, 0), 1.0, std::make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
-    return world;
+    return static_cast<hittable_list>(std::make_shared<bvh_node>(world, 0, 1));
+//    return world;
 }
 
 int main() {
-    const int image_width = 800;
-    const int image_height = 400;
-    const int samples_per_pixel = 50;
-    const int max_depth = 50;
+    const int image_width = 400;
+    const int image_height = 200;
+    const int samples_per_pixel = 100;
+    const int max_depth = 100;
 
     std::ofstream fout;
     fout.open("test.ppm");
@@ -99,11 +95,13 @@ int main() {
     auto aspect_ratio = double(image_width)/image_height;
     vec3 vup = vec3(0,1,0);
     double fov = 20;
-    vec3 lookfrom = vec3(-13,2,3);
-    vec3 lookat = vec3(0,0,0);
+    vec3 lookfrom = vec3(13,2,3);
+    vec3 lookat = vec3(0,1,0);
     auto dist_to_focus = (lookfrom - lookat).length();
     auto aperture = 0.1;    //光圈大小
-    camera cam(lookfrom, lookat, vup, fov, aspect_ratio, aperture, dist_to_focus);
+    double shutter_begin_time = 0.0;
+    double shutter_end_time = 1.0;
+    camera cam(lookfrom, lookat, vup, fov, aspect_ratio, aperture, dist_to_focus, shutter_begin_time, shutter_end_time);
 
     for(int j = image_height-1; j >= 0; j--){
         std::cerr << "\rScanlines remaining: " << j << " " << std::flush;   //显示剩余时间

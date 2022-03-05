@@ -4,7 +4,7 @@
 
 #ifndef RAYTRACING_MATERIAL_H
 #define RAYTRACING_MATERIAL_H
-#include "rt_library.h"
+
 
 class material{
 public:
@@ -18,7 +18,7 @@ public:
 
     virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const{
         vec3 scatter_direction = rec.normal + random_unit_vector();
-        scattered = ray(rec.p, scatter_direction);
+        scattered = ray(rec.p, scatter_direction, r_in.time());
         attenuation = albedo;
         return true;
     }

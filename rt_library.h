@@ -5,10 +5,13 @@
 #ifndef RAYTRACING_RT_LIBRARY_H
 #define RAYTRACING_RT_LIBRARY_H
 
+#include <iostream>
+#include <fstream>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <memory>
+
 
 const double infinity = std::numeric_limits<double>::infinity();    //无穷
 const double pi = 3.1415926535897932385;    //PI
@@ -31,6 +34,10 @@ inline double random_double(){
 inline double random_double(double min, double max){
     return min + (max-min) * random_double();
 }
+//返回随机数，[min,max)
+inline int random_int(int min, int max){
+    return min + (max-min) * (int)random_double();
+}
 
 //将x限制在[min,max]
 inline double clamp(double x, double min, double max){
@@ -46,9 +53,13 @@ double schlick(double cosine, double ref_idx){
     return r0 + (1-r0)*pow(1-cosine, 5);
 }
 
+#include "hittable_list.h"
+#include "sphere.h"
+#include "moving_sphere.h"
+#include "camera.h"
+#include "material.h"
 #include "ray.h"
 #include "vec3.h"
-#include "hittable.h"
 
 
 #endif //RAYTRACING_RT_LIBRARY_H
