@@ -94,6 +94,27 @@ hittable_list two_spheres() {
     return objects;
 }
 
+//噪声测试场景
+hittable_list two_perlin_spheres() {
+    hittable_list objects;
+
+    auto pertext = std::make_shared<noise_texture>(5);
+    objects.add(std::make_shared<sphere>(vec3(0,-1000, 0), 1000, std::make_shared<lambertian>(pertext)));
+    objects.add(std::make_shared<sphere>(vec3(0, 2, 0), 2, std::make_shared<lambertian>(pertext)));
+
+    return objects;
+}
+//噪声扰动测试场景
+hittable_list two_turb_spheres() {
+    hittable_list objects;
+
+    auto pertext = std::make_shared<turb_texture>(5);
+    objects.add(std::make_shared<sphere>(vec3(0,-1000, 0), 1000, std::make_shared<lambertian>(pertext)));
+    objects.add(std::make_shared<sphere>(vec3(0, 2, 0), 2, std::make_shared<lambertian>(pertext)));
+
+    return objects;
+}
+
 int main() {
     const int image_width = 800;
     const int image_height = 400;
@@ -106,7 +127,9 @@ int main() {
     fout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
 //    hittable_list world = random_scene();
-    hittable_list world = two_spheres();
+//    hittable_list world = two_spheres();
+//    hittable_list world = two_perlin_spheres();
+    hittable_list world = two_turb_spheres();
 
     auto R = cos(pi/4);
     auto aspect_ratio = double(image_width)/image_height;
