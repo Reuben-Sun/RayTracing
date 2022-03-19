@@ -60,4 +60,12 @@ bool sphere::bounding_box(double t0, double t1, aabb &output_box) const {
             );
     return true;
 }
+
+//获得球的uv
+void get_sphere_uv(const vec3& p, double& u, double& v){
+    auto phi = atan2(p.z(), p.x());     //极坐标相对极轴朝下旋转的角度
+    auto theta = asin(p.y());           //极坐标绕着极轴旋转的角度
+    u = 1 - (phi + pi) / (2 * pi);
+    v = (theta + pi/2) / pi;
+}
 #endif //RAYTRACING_SPHERE_H

@@ -1,5 +1,7 @@
 #include "rt_library.h"
 #include "bvh.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 
 vec3 ray_color(const ray& r, const hittable& world, int depth){
@@ -115,6 +117,19 @@ hittable_list two_turb_spheres() {
     return objects;
 }
 
+//图像测试场景
+hittable_list image_scene(){
+    int nx, ny, nn;
+    unsigned char* texture_data = stbi_load("earth.jpg", &nx, &ny, &nn, 0);
+
+    auto earth_surface =
+            std::make_shared<lambertian>(std::make_shared<image_texture>(texture_data, nx, ny));
+    auto globe = std::make_shared<sphere>(vec3(0,0,0), 2, earth_surface);
+
+    return hittable_list(globe);
+}
+
+
 int main() {
     const int image_width = 800;
     const int image_height = 400;
@@ -129,7 +144,8 @@ int main() {
 //    hittable_list world = random_scene();
 //    hittable_list world = two_spheres();
 //    hittable_list world = two_perlin_spheres();
-    hittable_list world = two_turb_spheres();
+//    hittable_list world = two_turb_spheres();
+    hittable_list world = image_scene();
 
     auto R = cos(pi/4);
     auto aspect_ratio = double(image_width)/image_height;
