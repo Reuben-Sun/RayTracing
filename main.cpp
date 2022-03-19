@@ -4,6 +4,8 @@
 #include "stb_image.h"
 #include "xy_rect.h"
 #include "flip_face.h"
+#include "box.h"
+#include "translate.h"
 
 
 vec3 ray_color(const ray& r, const vec3& background, const hittable& world, int depth){
@@ -157,12 +159,23 @@ hittable_list cornell_box() {
     auto green = make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.12, 0.45, 0.15)));
     auto light = make_shared<diffuse_light>(std::make_shared<constant_texture>(vec3(15, 15, 15)));
 
+    //背景
     objects.add(make_shared<flip_face>(make_shared<yz_rect>(0, 555, 0, 555, 555, green)));
     objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
     objects.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
     objects.add(make_shared<flip_face>(make_shared<xz_rect>(0, 555, 0, 555, 555, white)));
     objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
     objects.add(make_shared<flip_face>(make_shared<xy_rect>(0, 555, 0, 555, 555, white)));
+    //物体
+    std::shared_ptr<hittable> box1 = std::make_shared<box>(vec3(0, 0, 0), vec3(165, 330, 165), white);
+    box1 = std::make_shared<rotate_y>(box1,  15);
+    box1 = std::make_shared<translate>(box1, vec3(265,0,295));
+    objects.add(box1);
+
+    std::shared_ptr<hittable> box2 = std::make_shared<box>(vec3(0,0,0), vec3(165,165,165), white);
+    box2 = std::make_shared<rotate_y>(box2, -18);
+    box2 = std::make_shared<translate>(box2, vec3(130,0,65));
+    objects.add(box2);
     return objects;
 }
 
