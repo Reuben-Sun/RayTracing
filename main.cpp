@@ -2,24 +2,28 @@
 #include "bvh.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "xy_rect.h"
+#include "flip_face.h"
 
 
-vec3 ray_color(const ray& r, const hittable& world, int depth){
+vec3 ray_color(const ray& r, const vec3& background, const hittable& world, int depth){
     hit_record rec;
     if(depth <= 0){
         return vec3(0,0,0);
     }
-    if(world.hit(r, 0.001, infinity, rec)){     //这里使用0.001是为了防止自相交，从而避免阴影渗漏
-        ray scattered;
-        vec3 attenuation;
-        if(rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
-            return attenuation * ray_color(scattered, world, depth -1);
-        }
-        return vec3(0,0,0);
+    if(!world.hit(r, 0.001, infinity, rec)){     //这里使用0.001是为了防止自相交，从而避免阴影渗漏
+        return background;
     }
-    vec3 unit_direction = unit_vector(r.direction());
-    auto t = 0.5 * (unit_direction.y() + 1.0);
-    return (1.0 - t) * vec3(1,1,1) + t * vec3(0.5, 0.7, 1.0);
+    ray scattered;
+    vec3 attenuation;
+    vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+    if(!rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
+        return emitted;
+    }
+    return emitted + attenuation * ray_color(scattered, background, world, depth -1);
+//    vec3 unit_direction = unit_vector(r.direction());
+//    auto t = 0.5 * (unit_direction.y() + 1.0);
+//    return (1.0 - t) * vec3(1,1,1) + t * vec3(0.5, 0.7, 1.0);
 }
 
 hittable_list my_scene(){
@@ -129,12 +133,46 @@ hittable_list image_scene(){
     return hittable_list(globe);
 }
 
+//矩形光源测试场景
+hittable_list simple_light() {
+    hittable_list objects;
+
+    auto pertext = std::make_shared<turb_texture>(4);
+    objects.add(std::make_shared<sphere>(vec3(0,-1000, 0), 1000, std::make_shared<lambertian>(pertext)));
+    objects.add(std::make_shared<sphere>(vec3(0,2,0), 2, std::make_shared<lambertian>(pertext)));
+
+    auto difflight = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(vec3(4,4,4)));
+    objects.add(std::make_shared<sphere>(vec3(0,7,0), 2, difflight));
+    objects.add(std::make_shared<xy_rect>(3, 5, 1, 3, -2, difflight));
+
+    return objects;
+}
+
+//Cornell Box场景
+hittable_list cornell_box() {
+    hittable_list objects;
+
+    auto red = make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.65, 0.05, 0.05)));
+    auto white = make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.73, 0.73, 0.73)));
+    auto green = make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.12, 0.45, 0.15)));
+    auto light = make_shared<diffuse_light>(std::make_shared<constant_texture>(vec3(15, 15, 15)));
+
+    objects.add(make_shared<flip_face>(make_shared<yz_rect>(0, 555, 0, 555, 555, green)));
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    objects.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+    objects.add(make_shared<flip_face>(make_shared<xz_rect>(0, 555, 0, 555, 555, white)));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(make_shared<flip_face>(make_shared<xy_rect>(0, 555, 0, 555, 555, white)));
+    return objects;
+}
+
+
 
 int main() {
-    const int image_width = 800;
+    const int image_width = 400;
     const int image_height = 400;
-    const int samples_per_pixel = 50;
-    const int max_depth = 50;
+    const int samples_per_pixel = 200;
+    const int max_depth = 200;
 
     std::ofstream fout;
     fout.open("test.ppm");
@@ -145,19 +183,23 @@ int main() {
 //    hittable_list world = two_spheres();
 //    hittable_list world = two_perlin_spheres();
 //    hittable_list world = two_turb_spheres();
-    hittable_list world = image_scene();
+//    hittable_list world = image_scene();
+    hittable_list world = cornell_box();
 
     auto R = cos(pi/4);
     auto aspect_ratio = double(image_width)/image_height;
     vec3 vup = vec3(0,1,0);
-    double fov = 20;
-    vec3 lookfrom = vec3(13,2,3);
-    vec3 lookat = vec3(0,1,0);
-    auto dist_to_focus = (lookfrom - lookat).length();
-    auto aperture = 0.1;    //光圈大小
+    double fov = 40;
+    vec3 lookfrom = vec3(278,278,-800);
+    vec3 lookat = vec3(278,278,0);
+//    auto dist_to_focus = (lookfrom - lookat).length();
+    auto dist_to_focus = 10.0;
+    auto aperture = 0.0;    //光圈大小
     double shutter_begin_time = 0.0;
     double shutter_end_time = 1.0;
     camera cam(lookfrom, lookat, vup, fov, aspect_ratio, aperture, dist_to_focus, shutter_begin_time, shutter_end_time);
+
+    const vec3 background(0,0,0);   //纯黑背景
 
     for(int j = image_height-1; j >= 0; j--){
         std::cerr << "\rScanlines remaining: " << j << " " << std::flush;   //显示剩余时间
@@ -167,7 +209,7 @@ int main() {
                 auto u = (i + random_double()) / image_width;
                 auto v = (j + random_double()) / image_height;
                 ray r = cam.get_ray(u,v);
-                color += ray_color(r, world, max_depth);
+                color += ray_color(r, background, world, max_depth);
             }
             color.write_color(fout, samples_per_pixel);
         }
