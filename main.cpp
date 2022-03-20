@@ -6,6 +6,7 @@
 #include "flip_face.h"
 #include "box.h"
 #include "translate.h"
+#include "volumes.h"
 
 
 vec3 ray_color(const ray& r, const vec3& background, const hittable& world, int depth){
@@ -179,7 +180,35 @@ hittable_list cornell_box() {
     return objects;
 }
 
+//Cornell Smoke场景
+hittable_list cornell_smoke() {
+    hittable_list objects;
 
+    auto red = std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.65, 0.05, 0.05)));
+    auto white = std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.73, 0.73, 0.73)));
+    auto green = std::make_shared<lambertian>(std::make_shared<constant_texture>(vec3(0.12, 0.45, 0.15)));
+    auto light = std::make_shared<diffuse_light>(std::make_shared<constant_texture>(vec3(7, 7, 7)));
+
+    objects.add(std::make_shared<flip_face>(std::make_shared<yz_rect>(0, 555, 0, 555, 555, green)));
+    objects.add(std::make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    objects.add(std::make_shared<xz_rect>(113, 443, 127, 432, 554, light));
+    objects.add(std::make_shared<flip_face>(std::make_shared<xz_rect>(0, 555, 0, 555, 555, white)));
+    objects.add(std::make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(std::make_shared<flip_face>(std::make_shared<xy_rect>(0, 555, 0, 555, 555, white)));
+
+    std::shared_ptr<hittable> box1 = std::make_shared<box>(vec3(0,0,0), vec3(165,330,165), white);
+    box1 = std::make_shared<rotate_y>(box1,  15);
+    box1 = std::make_shared<translate>(box1, vec3(265,0,295));
+
+    std::shared_ptr<hittable> box2 = std::make_shared<box>(vec3(0,0,0), vec3(165,165,165), white);
+    box2 = std::make_shared<rotate_y>(box2, -18);
+    box2 = std::make_shared<translate>(box2, vec3(130,0,65));
+
+    objects.add(std::make_shared<constant_medium>(box1, 0.01, std::make_shared<constant_texture>(vec3(0,0,0))));
+    objects.add(std::make_shared<constant_medium>(box2, 0.01, std::make_shared<constant_texture>(vec3(1,1,1))));
+
+    return objects;
+}
 
 int main() {
     const int image_width = 400;
@@ -197,7 +226,8 @@ int main() {
 //    hittable_list world = two_perlin_spheres();
 //    hittable_list world = two_turb_spheres();
 //    hittable_list world = image_scene();
-    hittable_list world = cornell_box();
+//    hittable_list world = cornell_box();
+    hittable_list world = cornell_smoke();
 
     auto R = cos(pi/4);
     auto aspect_ratio = double(image_width)/image_height;
